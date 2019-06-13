@@ -18,9 +18,9 @@ let destination;
 let trainTime;
 let frequency;
 
-
 //create an event handler to store user input in variables, then firebase, and then display onto the table. 
 $("#submit").on("click", function (){
+  event.preventDefault();
   //isolates the text entered by user and stores it in a variable
     trainName = $("#train-name-input").val().trim();
     destination = $("#destination-input").val().trim();
@@ -32,6 +32,13 @@ $("#submit").on("click", function (){
     console.log(trainTime);
     console.log(frequency);
 
+    let newTrain = {
+      name: trainName,
+      destination: destination,
+      firstTrain: trainTime,
+      frequency: frequency
+    }
+
   //empties the input boxes to avoid user needing to backspace
     $("#train-name-input").val("");
     $("#destination-input").val("");
@@ -39,18 +46,45 @@ $("#submit").on("click", function (){
     $("#frequency-input").val("");
 
   //pushes variable information to the firebase database and stores it there
-    database.ref().push({
-        trainName : trainName,
-        destination : destination, 
-        trainTime : trainTime,
-        frequency : frequency,
-        trainNumber : trainNumber
+    database.ref().push(newTrain);
+  
+    database.ref().on("child_added", function(childSnapshot) {
+      var trainName = childSnapshot.val().name;
+      var destination = childSnapshot.val().destination;
+      var trainTime = childSnapshot.val().firstTrain;
+      var frequency = childSnapshot.val().frequency;
+
     })
   
+    // First Time (pushed back 1 year to make sure it comes before current time)
+  var firstTimeConverted = moment(trainTime, "HH:mm").subtract(1, "years");
+  console.log("firstTimeConverted: " + firstTimeConverted);
+
+  // Current Time
+  var currentTime = moment();
+  console.log("CURRENT TIME: " + moment(currentTime).format("hh:mm"));
+
+  // Difference between the times
+  var diffTime = moment().diff(moment(firstTimeConverted), "minutes");
+  console.log("DIFFERENCE IN TIME: " + diffTime);
+
+  // Time apart (remainder)
+  var tRemainder = diffTime % frequency;
+  console.log(tRemainder);
+
+  // Minute Until Train
+  var tMinutesTillTrain = frequency - tRemainder;
+  console.log("MINUTES TILL TRAIN: " + tMinutesTillTrain);
+
+  // Next Train
+  var nextTrain = moment().add(tMinutesTillTrain, "minutes");
+  console.log("ARRIVAL TIME: " + moment(nextTrain).format("hh:mm"));
+
   //variable making a new row in a table with the information from each input area
-    let addRow = " <tr><td>" + trainName + "<td>" + destination + "<td>" + frequency + "<td>" + "placeholder" + "<td>" + "placeholder" + "</tr>";
+    let addRow = " <tr><td>" + newTrain.name + "<td>" + destination + "<td>" + frequency + "<td>"  + moment(nextTrain).format("hh:mm") + "<td>" + tMinutesTillTrain + "</tr>";
   
   //appending the aforementioned markup to DOM 
-    $("#display-table").append(addRow);
+    $("#display-table").html(addRow);
+
 })
 
